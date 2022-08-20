@@ -76,7 +76,7 @@ func main() {
 
 	var workerWG sync.WaitGroup
 	for i := 0; i < conn; i++ {
-		go worker(stopConsumerChan, jobChan, &w)
+		go worker(stopConsumerChan, jobChan, &workerWG)
 	}
 
 	generate(url, stopProducerChan, jobChan)
