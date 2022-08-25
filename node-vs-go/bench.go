@@ -7,24 +7,26 @@ import (
 	"os/signal"
 	"strconv"
 	"syscall"
+	"time"
 )
 
 type token struct{}
 
 func exit() {
-	fmt.Println("USAGE: bench.go <url> <parallel-connections>")
+	fmt.Println("USAGE: bench.go <url> <conncurrency> <buffer-size>")
 	os.Exit(1)
 }
 
-func metrics(endTime, execTime int64) {
-	// TODO: Implement circular buffer.
-}
-
-func work(url string, tokens chan token) {
+func work(url string, tokens <-chan token) {
+	ok := true
+	startTime := time.Now().UnixMilli()
 	_, err := http.Get(url)
 	if err != nil {
-		// TODO: handle error
+		ok = false
 	}
+	endTime := time.Now().UnixMilli()
+	execTime := endTime - startTime
+	fmt.Printf("%v,%v,%v\n", ok, endTime, execTime)
 	<-tokens
 }
 
@@ -34,10 +36,9 @@ func main() {
 	}
 
 	url := os.Args[1]
-	fmt.Println(url)
-	limit, err := strconv.Atoi(os.Args[2])
+	limit, err1 := strconv.Atoi(os.Args[2])
 
-	if err != nil {
+	if err1 != nil {
 		exit()
 	}
 
@@ -46,12 +47,10 @@ func main() {
 
 	tokens := make(chan token, limit)
 
-	fmt.Println("Benchmark Start")
 done:
 	for {
 		select {
 		case <-stop:
-			fmt.Println("Benchmark Stopping..")
 			break done
 		default:
 			tokens <- token{}
@@ -59,13 +58,9 @@ done:
 		}
 	}
 
-	// make sure existing goroutines have completed.
 	for i := 0; i < limit; i++ {
 		tokens <- token{}
 	}
-
 	close(stop)
 	close(tokens)
-
-	fmt.Println("Benchmark Done")
 }
